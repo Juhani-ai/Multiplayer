@@ -1203,6 +1203,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2048750315}
   - component: {fileID: 2048750316}
+  - component: {fileID: 2048750317}
   m_Layer: 0
   m_Name: UIManager
   m_TagString: Untagged
@@ -1240,6 +1241,18 @@ MonoBehaviour:
   hostButton: {fileID: 1627649473}
   clientButton: {fileID: 1658384968}
   serverButton: {fileID: 870245082}
+--- !u!114 &2048750317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2048750314}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d945324aaf1bd4dd58f8f9d507d667ac, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ExitGame
 --- !u!1 &2054641826
 GameObject:
   m_ObjectHideFlags: 0
@@ -1532,6 +1545,10 @@ PrefabInstance:
       propertyPath: GlobalObjectIdHash
       value: 987445879
       objectReference: {fileID: 0}
+    - target: {fileID: 1189902322533111485, guid: 7a860028541d8224ab55921ef53f3baf, type: 3}
+      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
+      value: 
+      objectReference: {fileID: 2048750317}
     - target: {fileID: 4968551973105513457, guid: 7a860028541d8224ab55921ef53f3baf, type: 3}
       propertyPath: m_Name
       value: Paska

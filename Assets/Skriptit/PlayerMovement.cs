@@ -1,75 +1,89 @@
-using UnityEngine;
 using Unity.Netcode;
+using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
+[RequireComponent(typeof(Collider))]
 public class PlayerMovement : NetworkBehaviour
 {
-    public float walkSpeed = 5f;
-    public float runSpeed = 10f;
-    public float jumpForce = 5f;
-    public Transform cameraTransform;
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float jumpImpulse = 5f;
+    [SerializeField] private float groundCheckExtra = 0.08f;
 
-    private CharacterController controller;
-    private Vector3 velocity;
-    private float gravity = -9.81f;
-    private bool isGrounded;
+    private Rigidbody rb;
+    private Collider col;
 
-    void Start()
+    private Vector2 moveInput;
+    private bool jumpQueued;
+
+    private void Awake()
     {
-        controller = GetComponent<CharacterController>();
+        rb = GetComponent<Rigidbody>();
+        col = GetComponent<Collider>();
 
-        // Jos EI omistaja → disable kamera + audiolistener
+        // Perusvakaus (ei pakko, mutta auttaa “tärinään/jumiin”)
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+    }
+
+    public override void OnNetworkSpawn()
+    {
+        // Vain omistaja simuloi omaa rigidbodyaan (helpoin malli tähän tehtävään).
+        rb.isKinematic = !IsOwner;
+
         if (!IsOwner)
         {
-            if (cameraTransform != null && cameraTransform.TryGetComponent<AudioListener>(out var listener))
-                listener.enabled = false;
-
-            if (cameraTransform != null && cameraTransform.TryGetComponent<Camera>(out var cam))
-                cam.enabled = false;
-
-            return; // Skipataan kaikki muu
-        }
-
-        // Jos on omistaja, lukitaan kursori
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-        if (cameraTransform == null)
-        {
-            Debug.LogWarning("cameraTransform not assigned in prefab!");
+            // Varmuuden vuoksi: ei-omistajan RB ei “sekoile”
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
         }
     }
 
-    void Update()
+    private void Update()
     {
-        if (!IsOwner || controller == null) return;
+        if (!IsOwner) return;
 
-        // ESC vapauttaa hiiren
-        if (Input.GetKeyDown(KeyCode.Escape))
-        {
-            Cursor.lockState = CursorLockMode.None;
-            Cursor.visible = true;
-        }
+        moveInput.x = Input.GetAxisRaw("Horizontal");
+        moveInput.y = Input.GetAxisRaw("Vertical");
+
+        if (Input.GetKeyDown(KeyCode.Space))
+            jumpQueued = true;
+    }
+
+    private void FixedUpdate()
+    {
+        if (!IsOwner) return;
 
         // Liike
-        isGrounded = controller.isGrounded;
-        if (isGrounded && velocity.y < 0)
-            velocity.y = -2f;
+        Vector3 planar = new Vector3(moveInput.x, 0f, moveInput.y);
+        if (planar.sqrMagnitude > 1f) planar.Normalize();
 
-        float h = Input.GetAxis("Horizontal");
-        float v = Input.GetAxis("Vertical");
-
-        Vector3 inputDirection = new Vector3(h, 0f, v).normalized;
-        Vector3 moveDirection = Quaternion.Euler(0, cameraTransform.eulerAngles.y, 0) * inputDirection;
-
-        float speed = Input.GetKey(KeyCode.B) ? runSpeed : walkSpeed;
-        controller.Move(moveDirection * speed * Time.deltaTime);
+        Vector3 v = rb.linearVelocity;
+        Vector3 targetPlanar = planar * moveSpeed;
+        rb.linearVelocity = new Vector3(targetPlanar.x, v.y, targetPlanar.z);
 
         // Hyppy
-        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
-            velocity.y = Mathf.Sqrt(jumpForce * -2f * gravity);
+        if (jumpQueued)
+        {
+            jumpQueued = false;
 
-        // Painovoima
-        velocity.y += gravity * Time.deltaTime;
-        controller.Move(velocity * Time.deltaTime);
+            if (IsGrounded())
+            {
+                // tee hypystä “siisti”, ei kummaa pomppua
+                if (rb.linearVelocity.y < 0f)
+                    rb.linearVelocity = new Vector3(rb.linearVelocity.x, 0f, rb.linearVelocity.z);
+
+                rb.AddForce(Vector3.up * jumpImpulse, ForceMode.Impulse);
+            }
+        }
+    }
+
+    private bool IsGrounded()
+    {
+        // Raycast colliderin alareunasta
+        Bounds b = col.bounds;
+        Vector3 origin = new Vector3(b.center.x, b.min.y + 0.02f, b.center.z);
+        float dist = groundCheckExtra + 0.04f;
+
+        return Physics.Raycast(origin, Vector3.down, dist, ~0, QueryTriggerInteraction.Ignore);
     }
 }
