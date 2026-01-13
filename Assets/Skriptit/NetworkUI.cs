@@ -6,48 +6,34 @@ public class NetworkUI : MonoBehaviour
 {
     public Button hostButton;
     public Button clientButton;
-
-    void OnGUI()
-    {
-        GUILayout.BeginArea(new Rect(10, 10, 300, 200));
-        GUILayout.BeginVertical("box");
-
-        if (!NetworkManager.Singleton.IsClient && !NetworkManager.Singleton.IsServer)
-        {
-            if (GUILayout.Button("Host"))
-            {
-                NetworkManager.Singleton.StartHost();
-            }
-
-            if (GUILayout.Button("Client"))
-            {
-                NetworkManager.Singleton.StartClient();
-            }
-
-            if (GUILayout.Button("Server"))
-            {
-                NetworkManager.Singleton.StartServer();
-            }
-        }
-
-        GUILayout.EndVertical();
-        GUILayout.EndArea();
-    }
+    public Button serverButton;
 
     void Start()
     {
         if (hostButton != null)
         {
-            hostButton.onClick.AddListener(() => {
+            hostButton.onClick.AddListener(() =>
+            {
                 NetworkManager.Singleton.StartHost();
             });
         }
 
         if (clientButton != null)
         {
-            clientButton.onClick.AddListener(() => {
+            clientButton.onClick.AddListener(() =>
+            {
                 NetworkManager.Singleton.StartClient();
             });
         }
+
+        if (serverButton != null)
+        {
+            serverButton.onClick.AddListener(() =>
+            {
+                NetworkManager.Singleton.StartHost();
+            });
+        }
+
+        // Voit lisätä myös serverButtonin tarvittaessa
     }
 }
