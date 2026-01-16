@@ -6,7 +6,6 @@ public class ExitGame : MonoBehaviour
     public void QuitGame()
     {
         ShutdownNetwork();
-
         Application.Quit();
 
 #if UNITY_EDITOR
@@ -15,11 +14,6 @@ public class ExitGame : MonoBehaviour
     }
 
     private void OnApplicationQuit()
-    {
-        ShutdownNetwork();
-    }
-
-    private void OnDestroy()
     {
         ShutdownNetwork();
     }

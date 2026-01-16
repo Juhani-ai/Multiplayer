@@ -1,5 +1,6 @@
 using Unity.Netcode;
 using UnityEngine;
+using System.Collections;
 
 [RequireComponent(typeof(Rigidbody))]
 public class NetworkFirstPersonController : NetworkBehaviour
@@ -10,13 +11,21 @@ public class NetworkFirstPersonController : NetworkBehaviour
 
     [Header("Look")]
     [SerializeField] private float mouseSensitivity = 150f;
-    [SerializeField] private Transform cameraPivot;      // CameraPivot
-    [SerializeField] private Camera playerCamera;        // Main Camera
-    [SerializeField] private AudioListener audioListener;// AudioListener (kamerassa)
+    [SerializeField] private Transform cameraPivot;
+    [SerializeField] private Camera playerCamera;
+    [SerializeField] private AudioListener audioListener;
 
     [Header("Ground Check")]
     [SerializeField] private float groundCheckDistance = 0.2f;
-    [SerializeField] private LayerMask groundMask = ~0;  // kaikki layerit oletuksena
+    [SerializeField] private LayerMask groundMask = ~0;
+
+    [Header("Fall Reset")]
+    [SerializeField] private float fallYLimit = -50f;
+    [SerializeField] private float respawnRadius = 10f;
+
+    [Header("Fade")]
+    [SerializeField] private CanvasGroup fadeCanvas;
+    [SerializeField] private float fadeDuration = 0.5f;
 
     private Rigidbody rb;
 
@@ -24,17 +33,14 @@ public class NetworkFirstPersonController : NetworkBehaviour
     private float yaw;
     private bool cursorLocked = true;
 
-    private Vector2 moveInput;     // x=left/right, y=forward/back (nuolet)
+    private Vector2 moveInput;
     private bool jumpQueued;
+    private bool respawning;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
-        if (rb != null)
-        {
-            // Estää “kierimisen”
-            rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        }
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
     public override void OnNetworkSpawn()
@@ -47,7 +53,6 @@ public class NetworkFirstPersonController : NetworkBehaviour
         }
         else
         {
-            // Ei-omistajat: ei kameraa, ei audiota, ei ohjausta
             SetLocalVisuals(false);
             enabled = false;
         }
@@ -57,13 +62,13 @@ public class NetworkFirstPersonController : NetworkBehaviour
     {
         if (playerCamera != null) playerCamera.enabled = enabledForOwner;
         if (audioListener != null) audioListener.enabled = enabledForOwner;
+        if (fadeCanvas != null) fadeCanvas.alpha = 0f;
     }
 
     private void Update()
     {
-        if (!IsOwner) return;
+        if (!IsOwner || respawning) return;
 
-        // ESC vapauttaa hiiren -> pystyt klikkaamaan UI:ta (Exit tms.)
         if (Input.GetKeyDown(KeyCode.Escape))
         {
             cursorLocked = !cursorLocked;
@@ -90,20 +95,23 @@ public class NetworkFirstPersonController : NetworkBehaviour
 
     private void FixedUpdate()
     {
-        if (!IsOwner) return;
+        if (!IsOwner || respawning) return;
 
-        // Käännä pelaajan kroppa yaw:lla
+        if (transform.position.y < fallYLimit)
+        {
+            StartCoroutine(RespawnRoutine());
+            return;
+        }
+
         rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
 
-        // Liike nuolilla suhteessa pelaajan suuntaan (FPS)
         Vector3 dir = (transform.right * moveInput.x + transform.forward * moveInput.y);
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
         Vector3 targetVel = dir * moveSpeed;
-        Vector3 currentVel = rb.linearVelocity; // Unity 6: linearVelocity ok
+        Vector3 currentVel = rb.linearVelocity;
         rb.linearVelocity = new Vector3(targetVel.x, currentVel.y, targetVel.z);
 
-        // Hyppy
         if (jumpQueued)
         {
             jumpQueued = false;
@@ -112,6 +120,55 @@ public class NetworkFirstPersonController : NetworkBehaviour
                 rb.AddForce(Vector3.up * jumpImpulse, ForceMode.Impulse);
             }
         }
+    }
+
+    private IEnumerator RespawnRoutine()
+    {
+        respawning = true;
+
+        LockCursor(false);
+
+        if (fadeCanvas != null)
+            yield return Fade(0f, 1f);
+
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        Vector3 randomOffset = new Vector3(
+            Random.Range(-respawnRadius, respawnRadius),
+            0f,
+            Random.Range(-respawnRadius, respawnRadius)
+        );
+
+        rb.position = randomOffset;
+        rb.rotation = Quaternion.identity;
+
+        yaw = 0f;
+        pitch = 0f;
+
+        if (cameraPivot != null)
+            cameraPivot.localRotation = Quaternion.identity;
+
+        yield return new WaitForFixedUpdate();
+
+        if (fadeCanvas != null)
+            yield return Fade(1f, 0f);
+
+        LockCursor(true);
+        respawning = false;
+    }
+
+    private IEnumerator Fade(float from, float to)
+    {
+        float t = 0f;
+        while (t < fadeDuration)
+        {
+            t += Time.deltaTime;
+            float a = Mathf.Lerp(from, to, t / fadeDuration);
+            fadeCanvas.alpha = a;
+            yield return null;
+        }
+        fadeCanvas.alpha = to;
     }
 
     private void ReadArrowKeyMovement()
@@ -130,7 +187,13 @@ public class NetworkFirstPersonController : NetworkBehaviour
     private bool IsGrounded()
     {
         Vector3 origin = transform.position + Vector3.up * 0.1f;
-        return Physics.Raycast(origin, Vector3.down, 0.1f + groundCheckDistance, groundMask, QueryTriggerInteraction.Ignore);
+        return Physics.Raycast(
+            origin,
+            Vector3.down,
+            0.1f + groundCheckDistance,
+            groundMask,
+            QueryTriggerInteraction.Ignore
+        );
     }
 
     private void LockCursor(bool locked)
