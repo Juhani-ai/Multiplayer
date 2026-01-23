@@ -20,6 +20,7 @@ public class NetworkFirstPersonController : NetworkBehaviour
     private float pitch;
     private Vector2 moveInput;
     private bool jumpQueued;
+    private bool movementEnabled = true;
 
     private float respawnY = -20f;
     private Vector3 spawnPoint = new Vector3(0f, 5f, 0f);
@@ -40,6 +41,13 @@ public class NetworkFirstPersonController : NetworkBehaviour
             return;
         }
 
+        GameObject spawn = GameObject.FindGameObjectWithTag("Spawn");
+        if (spawn != null)
+        {
+            rb.position = spawn.transform.position;
+            rb.linearVelocity = Vector3.zero;
+        }
+
         yaw = transform.eulerAngles.y;
         pitch = 0f;
 
@@ -50,6 +58,8 @@ public class NetworkFirstPersonController : NetworkBehaviour
     private void Update()
     {
         if (!IsOwner) return;
+
+        if (!movementEnabled) return;
 
         ReadArrowKeys();
         ReadMouse();
@@ -69,6 +79,9 @@ public class NetworkFirstPersonController : NetworkBehaviour
     private void FixedUpdate()
     {
         if (!IsOwner) return;
+
+        if (!movementEnabled) return;
+
 
         rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
 
@@ -112,5 +125,12 @@ public class NetworkFirstPersonController : NetworkBehaviour
 
         if (cameraPivot)
             cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+    }
+
+    public void DisableMovement()
+    {
+        movementEnabled = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
     }
 }
