@@ -16,48 +16,44 @@ public class NetworkFirstPersonController : NetworkBehaviour
     [SerializeField] private Camera playerCamera;
     [SerializeField] private AudioListener audioListener;
 
-    [Header("Movement Bob")]
+    [Header("Movement Bob (optional)")]
     [SerializeField] private Transform visualMesh;
     [SerializeField] private float bobSpeed = 8f;
     [SerializeField] private float bobAmount = 0.05f;
 
-    private float bobTimer;
-    private Vector3 meshStartLocalPos;
-
     private Rigidbody rb;
+
     private float yaw;
     private float pitch;
     private Vector2 moveInput;
     private bool jumpQueued;
+
     private bool movementEnabled = true;
 
-    private float respawnY = -20f;
-    private Vector3 spawnPoint = new Vector3(0f, 5f, 0f);
+    private float bobTimer;
+    private Vector3 meshStartLocalPos;
+
+    private Transform spawnTransform;
 
     private void Awake()
     {
         rb = GetComponent<Rigidbody>();
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
 
-        if (visualMesh)
-        meshStartLocalPos = visualMesh.localPosition;
+        if (visualMesh != null)
+            meshStartLocalPos = visualMesh.localPosition;
     }
 
     public override void OnNetworkSpawn()
     {
+        var spawnGO = GameObject.FindGameObjectWithTag("Spawn");
+        spawnTransform = spawnGO != null ? spawnGO.transform : null;
+
         if (!IsOwner)
         {
             if (playerCamera) playerCamera.enabled = false;
             if (audioListener) audioListener.enabled = false;
-            enabled = false;
             return;
-        }
-
-        GameObject spawn = GameObject.FindGameObjectWithTag("Spawn");
-        if (spawn != null)
-        {
-            rb.position = spawn.transform.position;
-            rb.linearVelocity = Vector3.zero;
         }
 
         yaw = transform.eulerAngles.y;
@@ -65,84 +61,95 @@ public class NetworkFirstPersonController : NetworkBehaviour
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // OWNER authority: owner tekee spawnin itse (varmin tapa)
+        TeleportToSpawn_Local();
+
+        // Ja ilmoittaa serverille (että serverin tila ei jää eri asentoon)
+        SubmitPositionToServerRpc(rb.position, rb.rotation);
     }
 
     private void Update()
     {
         if (!IsOwner) return;
-
         if (!movementEnabled) return;
 
         ReadArrowKeys();
         ReadMouse();
 
-        if (Mouse.current.leftButton.wasPressedThisFrame)
+        if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
             jumpQueued = true;
-
-        // Respawn jos tippuu
-        if (transform.position.y < respawnY)
-        {
-            rb.linearVelocity = Vector3.zero;
-            rb.angularVelocity = Vector3.zero;
-            rb.MovePosition(spawnPoint);
-        }
     }
 
     private void FixedUpdate()
     {
         if (!IsOwner) return;
-
         if (!movementEnabled) return;
-
 
         rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
 
         Vector3 dir = transform.right * moveInput.x + transform.forward * moveInput.y;
         if (dir.sqrMagnitude > 1f) dir.Normalize();
 
-        rb.linearVelocity = new Vector3(
-            dir.x * moveSpeed,
-            rb.linearVelocity.y,
-            dir.z * moveSpeed
-        );
+        var v = rb.linearVelocity;
+        v.x = dir.x * moveSpeed;
+        v.z = dir.z * moveSpeed;
+        rb.linearVelocity = v;
 
         if (jumpQueued)
         {
             jumpQueued = false;
             rb.AddForce(Vector3.up * jumpImpulse, ForceMode.Impulse);
-
-            if (jumpAudio && !jumpAudio.isPlaying)
-            jumpAudio.Play();
+            if (jumpAudio) jumpAudio.Play();
         }
 
         ApplyMovementBob();
     }
 
-    private void ApplyMovementBob()
+    public void DisableMovement()
     {
-        if (!visualMesh) return;
+        movementEnabled = false;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+    }
 
-        Vector3 horizontalVelocity = rb.linearVelocity;
-        horizontalVelocity.y = 0f;
+    public void Respawn()
+    {
+        if (!IsOwner) return;
 
-        if (horizontalVelocity.magnitude > 0.1f)
-        {
-            bobTimer += Time.fixedDeltaTime * bobSpeed;
+        TeleportToSpawn_Local();
+        SubmitPositionToServerRpc(rb.position, rb.rotation);
+    }
 
-            float bobY = Mathf.Sin(bobTimer) * bobAmount;
-            float bobX = Mathf.Cos(bobTimer * 0.5f) * bobAmount * 0.5f;
+    private void TeleportToSpawn_Local()
+    {
+        Vector3 target = spawnTransform != null ? spawnTransform.position : new Vector3(0f, 5f, 0f);
 
-            visualMesh.localPosition = meshStartLocalPos + new Vector3(bobX, bobY, 0f);
-        }
-        else
-        {
-            bobTimer = 0f;
-            visualMesh.localPosition = Vector3.Lerp(visualMesh.localPosition, meshStartLocalPos, Time.fixedDeltaTime * 8f);
-        }
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        rb.position = target;
+        transform.position = target;
+    }
+
+    [ServerRpc]
+    private void SubmitPositionToServerRpc(Vector3 pos, Quaternion rot)
+    {
+        // server asettaa oman tilansa samaksi (ei pakoteta muille clientille)
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        rb.position = pos;
+        transform.position = pos;
+
+        rb.rotation = rot;
+        transform.rotation = rot;
     }
 
     private void ReadArrowKeys()
     {
+        if (Keyboard.current == null) return;
+
         float x = 0f;
         float y = 0f;
 
@@ -167,10 +174,26 @@ public class NetworkFirstPersonController : NetworkBehaviour
             cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
-    public void DisableMovement()
+    private void ApplyMovementBob()
     {
-        movementEnabled = false;
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
+        if (!visualMesh) return;
+
+        Vector3 horizontalVelocity = rb.linearVelocity;
+        horizontalVelocity.y = 0f;
+
+        if (horizontalVelocity.magnitude > 0.1f)
+        {
+            bobTimer += Time.fixedDeltaTime * bobSpeed;
+
+            float bobY = Mathf.Sin(bobTimer) * bobAmount;
+            float bobX = Mathf.Cos(bobTimer * 0.5f) * bobAmount * 0.5f;
+
+            visualMesh.localPosition = meshStartLocalPos + new Vector3(bobX, bobY, 0f);
+        }
+        else
+        {
+            bobTimer = 0f;
+            visualMesh.localPosition = Vector3.Lerp(visualMesh.localPosition, meshStartLocalPos, Time.fixedDeltaTime * 8f);
+        }
     }
 }

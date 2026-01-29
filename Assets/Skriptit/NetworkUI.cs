@@ -1,44 +1,45 @@
-using UnityEngine;
+// NetworkUI.cs
 using Unity.Netcode;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class NetworkUI : MonoBehaviour
 {
     [SerializeField] private Button hostButton;
     [SerializeField] private Button clientButton;
-    [SerializeField] private GameObject panelToHide; // laita tähän UI-paneeli (optional)
+    [SerializeField] private GameObject panelToHide;
 
     private void Start()
     {
         if (NetworkManager.Singleton == null)
         {
-            Debug.LogError("NetworkManager.Singleton puuttuu scenestä.");
+            Debug.LogError("NetworkManager puuttuu");
             return;
         }
 
         if (hostButton != null)
-            hostButton.onClick.AddListener(StartHost);
+        {
+            hostButton.onClick.AddListener(() =>
+            {
+                NetworkManager.Singleton.StartHost();
+                AfterStart();
+            });
+        }
 
         if (clientButton != null)
-            clientButton.onClick.AddListener(StartClient);
-    }
-
-    private void StartHost()
-    {
-        if (NetworkManager.Singleton.StartHost())
-            AfterStart();
-    }
-
-    private void StartClient()
-    {
-        if (NetworkManager.Singleton.StartClient())
-            AfterStart();
+        {
+            clientButton.onClick.AddListener(() =>
+            {
+                NetworkManager.Singleton.StartClient();
+                AfterStart();
+            });
+        }
     }
 
     private void AfterStart()
     {
-        if (hostButton != null) hostButton.interactable = false;
-        if (clientButton != null) clientButton.interactable = false;
-        if (panelToHide != null) panelToHide.SetActive(false);
+        if (hostButton) hostButton.interactable = false;
+        if (clientButton) clientButton.interactable = false;
+        if (panelToHide) panelToHide.SetActive(false);
     }
 }

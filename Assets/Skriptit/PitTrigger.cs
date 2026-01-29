@@ -1,14 +1,11 @@
-// GoalTrigger.cs
 using UnityEngine;
 
-public class GoalTrigger : MonoBehaviour
+public class PitTrigger : MonoBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
         var player = other.GetComponentInParent<NetworkFirstPersonController>();
         if (player != null && player.IsOwner)
-        {
-            GameManager.Instance.FinishGame(player);
-        }
+            player.Respawn();
     }
 }
