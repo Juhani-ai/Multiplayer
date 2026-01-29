@@ -8,12 +8,21 @@ public class NetworkFirstPersonController : NetworkBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float jumpImpulse = 5f;
+    [SerializeField] private AudioSource jumpAudio;
 
     [Header("Look")]
     [SerializeField] private float mouseSensitivity = 0.12f;
     [SerializeField] private Transform cameraPivot;
     [SerializeField] private Camera playerCamera;
     [SerializeField] private AudioListener audioListener;
+
+    [Header("Movement Bob")]
+    [SerializeField] private Transform visualMesh;
+    [SerializeField] private float bobSpeed = 8f;
+    [SerializeField] private float bobAmount = 0.05f;
+
+    private float bobTimer;
+    private Vector3 meshStartLocalPos;
 
     private Rigidbody rb;
     private float yaw;
@@ -29,6 +38,9 @@ public class NetworkFirstPersonController : NetworkBehaviour
     {
         rb = GetComponent<Rigidbody>();
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
+        if (visualMesh)
+        meshStartLocalPos = visualMesh.localPosition;
     }
 
     public override void OnNetworkSpawn()
@@ -64,7 +76,7 @@ public class NetworkFirstPersonController : NetworkBehaviour
         ReadArrowKeys();
         ReadMouse();
 
-        if (Keyboard.current.spaceKey.wasPressedThisFrame)
+        if (Mouse.current.leftButton.wasPressedThisFrame)
             jumpQueued = true;
 
         // Respawn jos tippuu
@@ -98,6 +110,34 @@ public class NetworkFirstPersonController : NetworkBehaviour
         {
             jumpQueued = false;
             rb.AddForce(Vector3.up * jumpImpulse, ForceMode.Impulse);
+
+            if (jumpAudio && !jumpAudio.isPlaying)
+            jumpAudio.Play();
+        }
+
+        ApplyMovementBob();
+    }
+
+    private void ApplyMovementBob()
+    {
+        if (!visualMesh) return;
+
+        Vector3 horizontalVelocity = rb.linearVelocity;
+        horizontalVelocity.y = 0f;
+
+        if (horizontalVelocity.magnitude > 0.1f)
+        {
+            bobTimer += Time.fixedDeltaTime * bobSpeed;
+
+            float bobY = Mathf.Sin(bobTimer) * bobAmount;
+            float bobX = Mathf.Cos(bobTimer * 0.5f) * bobAmount * 0.5f;
+
+            visualMesh.localPosition = meshStartLocalPos + new Vector3(bobX, bobY, 0f);
+        }
+        else
+        {
+            bobTimer = 0f;
+            visualMesh.localPosition = Vector3.Lerp(visualMesh.localPosition, meshStartLocalPos, Time.fixedDeltaTime * 8f);
         }
     }
 
