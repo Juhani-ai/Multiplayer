@@ -6,54 +6,63 @@ using UnityEngine.InputSystem;
 public class NetworkFirstPersonController : NetworkBehaviour
 {
     [Header("Movement")]
-    [SerializeField] private float moveSpeed = 5f;
-    [SerializeField] private float jumpImpulse = 5f;
+    [SerializeField] float moveSpeed = 5f;
+    [SerializeField] float jumpForce = 7f;
+    [SerializeField] float fallMultiplier = 3f;
+
+    [Header("Ground")]
+    [SerializeField] Transform groundCheck;
+    [SerializeField] float groundRadius = 0.25f;
+    [SerializeField] LayerMask groundLayer;
 
     [Header("Look")]
-    [SerializeField] private float mouseSensitivity = 0.12f;
-    [SerializeField] private Transform cameraPivot;
-    [SerializeField] private Camera playerCamera;
-    [SerializeField] private AudioListener audioListener;
+    [SerializeField] float mouseSensitivity = 0.12f;
+    [SerializeField] Transform cameraPivot;
+    [SerializeField] Camera playerCamera;
+    [SerializeField] AudioListener audioListener;
 
-    private Rigidbody rb;
-    private bool movementEnabled = true;
-    private float yaw;
-    private float pitch;
-    private Vector2 moveInput;
-    private bool jumpQueued;
+    Rigidbody rb;
 
-    private Transform spawnTransform;
+    float yaw, pitch;
+    Vector2 moveInput;
+    bool jumpQueued;
+    bool grounded;
+    bool finished;
 
-    private void Awake()
+    Transform spawnPoint;
+
+    // ---- platform ----
+    Rigidbody platformRb;
+
+    void Awake()
     {
         rb = GetComponent<Rigidbody>();
+
         rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        rb.interpolation = RigidbodyInterpolation.Interpolate;
+        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
     }
 
     public override void OnNetworkSpawn()
     {
-        var spawnGO = GameObject.FindGameObjectWithTag("Spawn");
-        spawnTransform = spawnGO != null ? spawnGO.transform : null;
+        spawnPoint = GameObject.FindGameObjectWithTag("Spawn")?.transform;
 
         if (!IsOwner)
         {
-            if (playerCamera) playerCamera.enabled = false;
-            if (audioListener) audioListener.enabled = false;
+            playerCamera.enabled = false;
+            audioListener.enabled = false;
             return;
         }
-
-        yaw = transform.eulerAngles.y;
-        pitch = 0f;
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
-        ForceRespawn();
+        Respawn();
     }
 
-    private void Update()
+    void Update()
     {
-        if (!IsOwner || !movementEnabled) return;
+        if (!IsOwner || finished) return;
 
         ReadMovement();
         ReadMouse();
@@ -62,84 +71,120 @@ public class NetworkFirstPersonController : NetworkBehaviour
             jumpQueued = true;
     }
 
-    private void FixedUpdate()
+    void FixedUpdate()
     {
-        if (!IsOwner || !movementEnabled) return;
+        if (!IsOwner || finished) return;
 
-        rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
-
-        Vector3 dir = transform.right * moveInput.x + transform.forward * moveInput.y;
-        if (dir.sqrMagnitude > 1f) dir.Normalize();
-
-        rb.linearVelocity = new Vector3(
-            dir.x * moveSpeed,
-            rb.linearVelocity.y,
-            dir.z * moveSpeed
+        grounded = Physics.CheckSphere(
+            groundCheck.position,
+            groundRadius,
+            groundLayer
         );
 
-        if (jumpQueued)
+        Vector3 velocity = rb.linearVelocity;
+
+        // ---- horisontaalinen liike ----
+        Vector3 inputDir = transform.right * moveInput.x + transform.forward * moveInput.y;
+        velocity.x = inputDir.x * moveSpeed;
+        velocity.z = inputDir.z * moveSpeed;
+
+        // ---- HYPPY ----
+        if (jumpQueued && grounded)
         {
-            jumpQueued = false;
-            rb.AddForce(Vector3.up * jumpImpulse, ForceMode.Impulse);
+            velocity.y = jumpForce;
+        }
+
+        // ---- nopeutettu lasku ----
+        if (velocity.y < 0f)
+        {
+            velocity.y += Physics.gravity.y * fallMultiplier * Time.fixedDeltaTime;
+        }
+
+        // ---- PLATFORMIN VELOCITY (TÄRINÄ POIS) ----
+        if (grounded && platformRb != null)
+        {
+            velocity += platformRb.linearVelocity;
+        }
+
+        rb.linearVelocity = velocity;
+        jumpQueued = false;
+
+        rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
+    }
+
+    // ---------- COLLISIONS ----------
+    void OnCollisionStay(Collision col)
+    {
+        if (!IsOwner) return;
+
+        if (col.collider.CompareTag("Platform"))
+        {
+            platformRb = col.rigidbody;
         }
     }
 
-    // === RESPawn ===
-    public void ForceRespawn()
+    void OnCollisionExit(Collision col)
     {
-        Vector3 pos = spawnTransform != null
-            ? spawnTransform.position
-            : new Vector3(0f, 5f, 0f);
-
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
-
-        rb.position = pos;
-        transform.position = pos;
-
-        SubmitPositionToServerRpc(pos);
+        if (col.collider.CompareTag("Platform"))
+        {
+            platformRb = null;
+        }
     }
 
-    [ServerRpc]
-    private void SubmitPositionToServerRpc(Vector3 pos)
+    // ---------- INPUT ----------
+    void ReadMovement()
     {
-        rb.linearVelocity = Vector3.zero;
-        rb.angularVelocity = Vector3.zero;
+        float x = 0, y = 0;
 
-        rb.position = pos;
-        transform.position = pos;
-    }
-
-    // === INPUT ===
-    private void ReadMovement()
-    {
-        float x = 0f;
-        float y = 0f;
-
-        if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) x -= 1f;
-        if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) x += 1f;
-        if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) y += 1f;
-        if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) y -= 1f;
+        if (Keyboard.current.leftArrowKey.isPressed)  x -= 1;
+        if (Keyboard.current.rightArrowKey.isPressed) x += 1;
+        if (Keyboard.current.upArrowKey.isPressed)    y += 1;
+        if (Keyboard.current.downArrowKey.isPressed)  y -= 1;
 
         moveInput = new Vector2(x, y);
     }
 
-    private void ReadMouse()
+    void ReadMouse()
     {
-        Vector2 delta = Mouse.current.delta.ReadValue();
-        yaw += delta.x * mouseSensitivity;
-        pitch -= delta.y * mouseSensitivity;
+        Vector2 d = Mouse.current.delta.ReadValue();
+        yaw += d.x * mouseSensitivity;
+        pitch -= d.y * mouseSensitivity;
         pitch = Mathf.Clamp(pitch, -85f, 85f);
 
-        if (cameraPivot)
-            cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
+        cameraPivot.localRotation = Quaternion.Euler(pitch, 0, 0);
     }
 
-    public void DisableMovement()
+    // ---------- TRIGGERS ----------
+    void OnTriggerEnter(Collider other)
     {
         if (!IsOwner) return;
 
-        movementEnabled = false;
-        rb.linearVelocity = Vector3.zero;
+        if (other.CompareTag("Goal"))
+        {
+            finished = true;
+            rb.linearVelocity = Vector3.zero;
+            rb.isKinematic = true;
+            GameManager.Instance?.Finish();
+        }
+
+        if (other.CompareTag("Pit"))
+        {
+            Respawn();
+        }
     }
+
+    void Respawn()
+    {
+        finished = false;
+        rb.isKinematic = false;
+
+        Vector3 pos = spawnPoint ? spawnPoint.position : Vector3.up * 5f;
+        rb.linearVelocity = Vector3.zero;
+        rb.position = pos;
+
+        jumpQueued = false;
+        platformRb = null;
+    }
+
+    public void ForceRespawn() => Respawn();
 }

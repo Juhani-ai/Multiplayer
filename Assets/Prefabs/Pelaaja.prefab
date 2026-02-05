@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 2801106385759830225}
   - component: {fileID: 8508005620505894275}
   - component: {fileID: 1151220106635845680}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Iris (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -124,7 +124,7 @@ GameObject:
   - component: {fileID: 5153484078926608117}
   - component: {fileID: 8042305643037963894}
   - component: {fileID: 3878595367782628158}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: "Silm\xE4Pallo (1)"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -241,7 +241,7 @@ GameObject:
   - component: {fileID: 8864681397430516283}
   - component: {fileID: 5063447428168596381}
   - component: {fileID: 8537283502710203246}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Pelaaja
   m_TagString: Player
   m_Icon: {fileID: 0}
@@ -267,6 +267,7 @@ Transform:
   - {fileID: 1002504451654889864}
   - {fileID: 6581820168817790340}
   - {fileID: 7226873792588502142}
+  - {fileID: 4367079729430872383}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!136 &175365570574018684
@@ -331,7 +332,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 2900249123
+  GlobalObjectIdHash: 725835195
   InScenePlacedSourceGlobalObjectIdHash: 1434224209
   DeferredDespawnTick: 0
   Ownership: 1
@@ -517,9 +518,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::NetworkFirstPersonController
   ShowTopMostFoldoutHeaderGroup: 1
-  moveSpeed: 5
-  jumpImpulse: 5
-  jumpAudio: {fileID: 8864681397430516283}
+  moveSpeed: 10
+  jumpForce: 10
+  fallMultiplier: 2.5
+  groundCheck: {fileID: 4367079729430872383}
+  groundRadius: 0.35
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
   mouseSensitivity: 0.12
   cameraPivot: {fileID: 9097756226638736448}
   playerCamera: {fileID: 4348408272195736393}
@@ -536,7 +542,7 @@ GameObject:
   - component: {fileID: 928001420017531363}
   - component: {fileID: 1013843545608980478}
   - component: {fileID: 4814656477792640470}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Kulmat (1)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -647,7 +653,7 @@ GameObject:
   - component: {fileID: 7423021142010051242}
   - component: {fileID: 4348408272195736393}
   - component: {fileID: 1950570538823697456}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: "Silm\xE4t"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -662,13 +668,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3790381370048077030}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0.13, z: 0.221}
+  m_LocalRotation: {x: 0.23467642, y: -0, z: -0, w: 0.97207355}
+  m_LocalPosition: {x: 0, y: 2.4, z: -4.62}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 9097756226638736448}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 27.145, y: 0, z: 0}
 --- !u!20 &4348408272195736393
 Camera:
   m_ObjectHideFlags: 0
@@ -739,7 +745,7 @@ GameObject:
   - component: {fileID: 7226873792588502142}
   - component: {fileID: 8078023493984897935}
   - component: {fileID: 3627343043244665303}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Visual
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -830,7 +836,7 @@ GameObject:
   - component: {fileID: 2639830111152374450}
   - component: {fileID: 3158547128966259298}
   - component: {fileID: 4374277136230749015}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Kulmat
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -939,7 +945,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9097756226638736448}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: CameraPivot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -974,7 +980,7 @@ GameObject:
   - component: {fileID: 3451814670961474182}
   - component: {fileID: 3295099099160736673}
   - component: {fileID: 4333764475364685084}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: Iris
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1086,7 +1092,7 @@ GameObject:
   - component: {fileID: 3183189491202874888}
   - component: {fileID: 6054788147230715351}
   - component: {fileID: 5342987926312586087}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: "Silm\xE4Pallo"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1187,3 +1193,34 @@ SphereCollider:
   serializedVersion: 3
   m_Radius: 0.5
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!1 &9130107133892117962
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4367079729430872383}
+  m_Layer: 3
+  m_Name: GroundCheck
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4367079729430872383
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9130107133892117962}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -1.042, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2519686650473741371}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}

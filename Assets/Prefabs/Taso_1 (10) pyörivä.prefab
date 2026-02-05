@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 4384985749080359586}
   - component: {fileID: 193293444210420943}
   - component: {fileID: 8028253037424007687}
-  m_Layer: 0
+  m_Layer: 3
   m_Name: "Taso_1 (10) py\xF6riv\xE4"
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -28,7 +28,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3539577538725945982}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -47.600006}
   m_LocalScale: {x: 9.8328285, y: 0.14657499, z: 7.0676026}
   m_ConstrainProportionsScale: 0
@@ -125,4 +125,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a8292dda06e9cc31ba6b462154a0ff73, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RotatePlatform
-  rotationSpeed: 45
+  rotationSpeed: 60
+  direction: 0

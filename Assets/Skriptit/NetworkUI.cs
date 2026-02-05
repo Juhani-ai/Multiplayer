@@ -11,35 +11,29 @@ public class NetworkUI : MonoBehaviour
 
     private void Start()
     {
-        if (NetworkManager.Singleton == null)
-        {
-            Debug.LogError("NetworkManager puuttuu");
-            return;
-        }
+        if (hostButton)
+            hostButton.onClick.AddListener(StartHost);
 
-        if (hostButton != null)
-        {
-            hostButton.onClick.AddListener(() =>
-            {
-                NetworkManager.Singleton.StartHost();
-                AfterStart();
-            });
-        }
-
-        if (clientButton != null)
-        {
-            clientButton.onClick.AddListener(() =>
-            {
-                NetworkManager.Singleton.StartClient();
-                AfterStart();
-            });
-        }
+        if (clientButton)
+            clientButton.onClick.AddListener(StartClient);
     }
 
-    private void AfterStart()
+    private void StartHost()
     {
+        NetworkManager.Singleton.StartHost();
+        HideUI();
+    }
+
+    private void StartClient()
+    {
+        NetworkManager.Singleton.StartClient();
+        HideUI();
+    }
+
+    private void HideUI()
+    {
+        if (panelToHide) panelToHide.SetActive(false);
         if (hostButton) hostButton.interactable = false;
         if (clientButton) clientButton.interactable = false;
-        if (panelToHide) panelToHide.SetActive(false);
     }
 }

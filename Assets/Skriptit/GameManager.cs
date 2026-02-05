@@ -1,30 +1,57 @@
-// GameManager.cs
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
 
     [SerializeField] private GameObject finishText;
-    private bool gameFinished = false;
+    private bool finished;
 
-    private void Awake()
+    void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        Instance = this;
     }
 
-    private void Start()
+    void Start()
     {
-        if (finishText) finishText.SetActive(false);
+        ResetState();
     }
 
-    public void FinishGame(NetworkFirstPersonController player)
+    public void Finish()
     {
-        if (gameFinished) return;
-        gameFinished = true;
+        if (finished) return;
 
-        if (finishText) finishText.SetActive(true);
-        player.DisableMovement();
+        finished = true;
+
+        if (finishText)
+            finishText.SetActive(true);
+    }
+
+    void Update()
+    {
+        if (!finished) return;
+
+        if (Input.anyKeyDown)
+        {
+            Restart();
+        }
+    }
+
+    private void Restart()
+    {
+        // TÄRKEÄ: nollaa ensin oma tila
+        finished = false;
+
+        // Lataa scene uudelleen (toimii myös Netcodessa)
+        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+    }
+
+    private void ResetState()
+    {
+        finished = false;
+
+        if (finishText)
+            finishText.SetActive(false);
     }
 }
