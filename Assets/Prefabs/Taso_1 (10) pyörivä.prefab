@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 7847012202118142517}
   - component: {fileID: 4384985749080359586}
   - component: {fileID: 193293444210420943}
-  - component: {fileID: 8028253037424007687}
   m_Layer: 3
   m_Name: "Taso_1 (10) py\xF6riv\xE4"
   m_TagString: Untagged
@@ -113,17 +112,3 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &8028253037424007687
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3539577538725945982}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a8292dda06e9cc31ba6b462154a0ff73, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::RotatePlatform
-  rotationSpeed: 60
-  direction: 0

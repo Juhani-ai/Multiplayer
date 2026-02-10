@@ -5,10 +5,9 @@ public class PitTrigger : MonoBehaviour
 {
     private void OnTriggerEnter(Collider other)
     {
-        var player = other.GetComponentInParent<NetworkFirstPersonController>();
-        if (player == null || !player.IsOwner) return;
+        var player = other.GetComponentInParent<NetworkPlayerController>();
+        if (player == null) return;
 
-        // Tämä on nyt "idioottivarma": löytyy varmasti
-        player.ForceRespawn();
+        GameManager.Instance?.RequestRespawn(player);
     }
 }

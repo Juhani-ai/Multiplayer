@@ -235,12 +235,11 @@ GameObject:
   m_Component:
   - component: {fileID: 2519686650473741371}
   - component: {fileID: 175365570574018684}
-  - component: {fileID: 3677850563375999103}
   - component: {fileID: 1466516345124859943}
   - component: {fileID: 8205546567746488244}
   - component: {fileID: 8864681397430516283}
-  - component: {fileID: 5063447428168596381}
-  - component: {fileID: 8537283502710203246}
+  - component: {fileID: 6084499077232804720}
+  - component: {fileID: 4017009175795751522}
   m_Layer: 3
   m_Name: Pelaaja
   m_TagString: Player
@@ -293,33 +292,6 @@ CapsuleCollider:
   m_Height: 2
   m_Direction: 1
   m_Center: {x: 0, y: 0, z: 0}
---- !u!54 &3677850563375999103
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 903885722625327814}
-  serializedVersion: 5
-  m_Mass: 1
-  m_LinearDamping: 0
-  m_AngularDamping: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 1
-  m_Constraints: 0
-  m_CollisionDetection: 0
 --- !u!114 &1466516345124859943
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -332,7 +304,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 725835195
+  GlobalObjectIdHash: 1434224209
   InScenePlacedSourceGlobalObjectIdHash: 1434224209
   DeferredDespawnTick: 0
   Ownership: 1
@@ -488,24 +460,32 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &5063447428168596381
-MonoBehaviour:
+--- !u!143 &6084499077232804720
+CharacterController:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 903885722625327814}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 8
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ProvidesContacts: 0
   m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f6c0be61502bb534f922ebb746851216, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.Components.NetworkRigidbody
-  ShowTopMostFoldoutHeaderGroup: 1
-  NetworkRigidbodyBaseExpanded: 0
-  UseRigidBodyForMotion: 0
-  AutoUpdateKinematicState: 1
-  AutoSetKinematicOnDespawn: 1
---- !u!114 &8537283502710203246
+  serializedVersion: 3
+  m_Height: 2
+  m_Radius: 0.5
+  m_SlopeLimit: 45
+  m_StepOffset: 0.3
+  m_SkinWidth: 0.08
+  m_MinMoveDistance: 0.001
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &4017009175795751522
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -516,20 +496,21 @@ MonoBehaviour:
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3035877843046366bbe2dbced41c9220, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::NetworkFirstPersonController
+  m_EditorClassIdentifier: Assembly-CSharp::NetworkPlayerController
   ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 10
-  jumpForce: 10
-  fallMultiplier: 2.5
-  groundCheck: {fileID: 4367079729430872383}
-  groundRadius: 0.35
-  groundLayer:
-    serializedVersion: 2
-    m_Bits: 8
-  mouseSensitivity: 0.12
+  jumpForce: 18
+  gravity: -20
+  groundSnap: -12
   cameraPivot: {fileID: 9097756226638736448}
   playerCamera: {fileID: 4348408272195736393}
   audioListener: {fileID: 1950570538823697456}
+  mouseSensitivity: 0.12
+  groundCheck: {fileID: 4367079729430872383}
+  groundRadius: 0.3
+  groundLayer:
+    serializedVersion: 2
+    m_Bits: 8
 --- !u!1 &2792069126126048404
 GameObject:
   m_ObjectHideFlags: 0

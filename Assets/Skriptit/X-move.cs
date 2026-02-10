@@ -10,6 +10,9 @@ public class MovePlatform : MonoBehaviour
     public float moveSpeed = 2f;
     public MoveDirection startDirection = MoveDirection.Right;
 
+    // ✅ TÄMÄ PUUTTUI: fpsController.cs käyttää tätä
+    public Vector3 DeltaThisFrame { get; private set; }
+
     Rigidbody rb;
     Vector3 startPos;
     Vector3 moveDir;
@@ -24,21 +27,36 @@ public class MovePlatform : MonoBehaviour
         rb.interpolation = RigidbodyInterpolation.Interpolate;
     }
 
+    void OnEnable()
+    {
+        DeltaThisFrame = Vector3.zero;
+    }
+
     void Start()
     {
         startPos = rb.position;
 
-        // 👉 TÄMÄ ON SE OIKEA KOHTA
         moveDir = (startDirection == MoveDirection.Right)
             ? Vector3.right
             : Vector3.left;
 
-        direction = 1;       // edestakainen liike
+        direction = 1;
         travelled = 0f;
+
+        DeltaThisFrame = Vector3.zero;
     }
 
     void FixedUpdate()
     {
+        // ❗ KUN PELI EI OLE KÄYNNISSÄ → EI LIIKUTETA
+        if (GameManager.Instance == null || !GameManager.Instance.IsPlaying)
+        {
+            DeltaThisFrame = Vector3.zero;
+            return;
+        }
+
+        Vector3 before = rb.position;
+
         float step = moveSpeed * Time.fixedDeltaTime;
         travelled += step * direction;
 
@@ -54,6 +72,10 @@ public class MovePlatform : MonoBehaviour
         }
 
         Vector3 targetPos = startPos + moveDir * travelled;
+
+        // ✅ Tämä on se delta, jota pelaaja voi käyttää "pysyäkseen kyydissä"
+        DeltaThisFrame = targetPos - before;
+
         rb.MovePosition(targetPos);
     }
 }

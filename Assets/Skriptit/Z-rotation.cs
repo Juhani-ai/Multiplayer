@@ -9,11 +9,14 @@ public class RotatePlatform : MonoBehaviour
     }
 
     [Header("Rotation Settings")]
-    public float rotationSpeed = 45f; // astetta sekunnissa
+    public float rotationSpeed = 45f;
     public RotationDirection direction = RotationDirection.Clockwise;
 
     void Update()
     {
+        if (GameManager.Instance == null || !GameManager.Instance.IsPlaying)
+            return;
+
         float dir = (direction == RotationDirection.Clockwise) ? -1f : 1f;
         transform.Rotate(0f, 0f, dir * rotationSpeed * Time.deltaTime);
     }

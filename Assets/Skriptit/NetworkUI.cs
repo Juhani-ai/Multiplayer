@@ -11,26 +11,20 @@ public class NetworkUI : MonoBehaviour
 
     private void Start()
     {
-        if (hostButton)
-            hostButton.onClick.AddListener(StartHost);
+        if (hostButton) hostButton.onClick.AddListener(() =>
+        {
+            NetworkManager.Singleton.StartHost();
+            Hide();
+        });
 
-        if (clientButton)
-            clientButton.onClick.AddListener(StartClient);
+        if (clientButton) clientButton.onClick.AddListener(() =>
+        {
+            NetworkManager.Singleton.StartClient();
+            Hide();
+        });
     }
 
-    private void StartHost()
-    {
-        NetworkManager.Singleton.StartHost();
-        HideUI();
-    }
-
-    private void StartClient()
-    {
-        NetworkManager.Singleton.StartClient();
-        HideUI();
-    }
-
-    private void HideUI()
+    private void Hide()
     {
         if (panelToHide) panelToHide.SetActive(false);
         if (hostButton) hostButton.interactable = false;

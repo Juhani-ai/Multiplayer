@@ -12,7 +12,6 @@ GameObject:
   - component: {fileID: 8641340492207772205}
   - component: {fileID: 5689188287869587866}
   - component: {fileID: 8689376845425955894}
-  - component: {fileID: 3562366623541697892}
   - component: {fileID: 6074671056189400197}
   m_Layer: 3
   m_Name: Taso_1 (1) liikkuva
@@ -114,21 +113,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1, y: 1, z: 1}
   m_Center: {x: 0, y: 0, z: 0}
---- !u!114 &3562366623541697892
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3864512038315061677}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 42d3f646c78612a21a41c3e6af9e3827, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::MovePlatform
-  moveDistance: 20
-  moveSpeed: 8
-  startDirection: 1
 --- !u!54 &6074671056189400197
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -152,7 +136,7 @@ Rigidbody:
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
   m_UseGravity: 0
-  m_IsKinematic: 1
+  m_IsKinematic: 0
   m_Interpolate: 1
   m_Constraints: 0
   m_CollisionDetection: 0

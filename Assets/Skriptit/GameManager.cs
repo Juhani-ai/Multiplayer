@@ -1,57 +1,62 @@
+// GameManager.cs
+using Unity.Netcode;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
-public class GameManager : MonoBehaviour
+public class GameManager : NetworkBehaviour
 {
-    public static GameManager Instance;
+    public static GameManager Instance { get; private set; }
+    public bool IsPlaying => isPlaying.Value;
 
-    [SerializeField] private GameObject finishText;
-    private bool finished;
+    private readonly NetworkVariable<bool> isPlaying = new NetworkVariable<bool>(
+        true,
+        NetworkVariableReadPermission.Everyone,
+        NetworkVariableWritePermission.Server
+    );
 
-    void Awake()
+    private void Awake()
     {
+        if (Instance != null && Instance != this) { Destroy(gameObject); return; }
         Instance = this;
     }
 
-    void Start()
+    public override void OnNetworkSpawn()
     {
-        ResetState();
+        if (IsServer) isPlaying.Value = true;
     }
 
-    public void Finish()
+    public void ReachGoal()
     {
-        if (finished) return;
+        if (!IsSpawned) return;
 
-        finished = true;
-
-        if (finishText)
-            finishText.SetActive(true);
+        if (IsServer) isPlaying.Value = false;
+        else ReachGoalRpc();
     }
 
-    void Update()
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void ReachGoalRpc()
     {
-        if (!finished) return;
-
-        if (Input.anyKeyDown)
-        {
-            Restart();
-        }
+        isPlaying.Value = false;
     }
 
-    private void Restart()
+    // Jos joskus haluat respawnin takaisin: tätä voi kutsua suoraan pelaajalta.
+    public void RequestRespawn(NetworkPlayerController player)
     {
-        // TÄRKEÄ: nollaa ensin oma tila
-        finished = false;
+        if (player == null) return;
+        if (!IsSpawned) return;
 
-        // Lataa scene uudelleen (toimii myös Netcodessa)
-        SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
+        if (IsServer) player.ServerRespawn();
+        else RequestRespawnRpc(player.NetworkObjectId);
     }
 
-    private void ResetState()
+    [Rpc(SendTo.Server, InvokePermission = RpcInvokePermission.Everyone)]
+    private void RequestRespawnRpc(ulong playerNetworkObjectId)
     {
-        finished = false;
+        if (!NetworkManager.Singleton.SpawnManager.SpawnedObjects.TryGetValue(playerNetworkObjectId, out var no))
+            return;
 
-        if (finishText)
-            finishText.SetActive(false);
+        var player = no.GetComponent<NetworkPlayerController>();
+        if (player == null) return;
+
+        player.ServerRespawn();
     }
 }

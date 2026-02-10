@@ -1,190 +1,178 @@
+// NetworkPlayerController.cs
 using Unity.Netcode;
+using Unity.Netcode.Components;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-[RequireComponent(typeof(Rigidbody))]
-public class NetworkFirstPersonController : NetworkBehaviour
+[RequireComponent(typeof(CharacterController))]
+public class NetworkPlayerController : NetworkBehaviour
 {
     [Header("Movement")]
-    [SerializeField] float moveSpeed = 5f;
-    [SerializeField] float jumpForce = 7f;
-    [SerializeField] float fallMultiplier = 3f;
-
-    [Header("Ground")]
-    [SerializeField] Transform groundCheck;
-    [SerializeField] float groundRadius = 0.25f;
-    [SerializeField] LayerMask groundLayer;
+    [SerializeField] private float moveSpeed = 6f;
+    [SerializeField] private float jumpForce = 7f;
+    [SerializeField] private float gravity = -30f;     // negatiivinen
+    [SerializeField] private float groundSnap = -12f;  // kun grounded -> paina alas, ei leijuntaa
 
     [Header("Look")]
-    [SerializeField] float mouseSensitivity = 0.12f;
-    [SerializeField] Transform cameraPivot;
-    [SerializeField] Camera playerCamera;
-    [SerializeField] AudioListener audioListener;
+    [SerializeField] private Transform cameraPivot;
+    [SerializeField] private Camera playerCamera;
+    [SerializeField] private AudioListener audioListener;
+    [SerializeField] private float mouseSensitivity = 0.12f;
 
-    Rigidbody rb;
+    [Header("Ground Check")]
+    [SerializeField] private Transform groundCheck;
+    [SerializeField] private float groundRadius = 0.3f;
+    [SerializeField] private LayerMask groundLayer;
 
-    float yaw, pitch;
-    Vector2 moveInput;
-    bool jumpQueued;
-    bool grounded;
-    bool finished;
+    private CharacterController controller;
+    private float yVelocity;
+    private float yaw;
+    private float pitch;
 
-    Transform spawnPoint;
+    private Transform spawnT;
+    private Vector3 spawnPos;
 
-    // ---- platform ----
-    Rigidbody platformRb;
+    // Moving platform sticking
+    private Transform groundPlatform;
+    private Vector3 lastPlatformPos;
 
-    void Awake()
+    private void Awake()
     {
-        rb = GetComponent<Rigidbody>();
-
-        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
-        rb.interpolation = RigidbodyInterpolation.Interpolate;
-        rb.collisionDetectionMode = CollisionDetectionMode.Continuous;
+        controller = GetComponent<CharacterController>();
     }
 
     public override void OnNetworkSpawn()
     {
-        spawnPoint = GameObject.FindGameObjectWithTag("Spawn")?.transform;
+        spawnT = GameObject.FindGameObjectWithTag("Spawn")?.transform;
+        spawnPos = spawnT ? spawnT.position : transform.position;
 
         if (!IsOwner)
         {
-            playerCamera.enabled = false;
-            audioListener.enabled = false;
+            if (playerCamera) playerCamera.enabled = false;
+            if (audioListener) audioListener.enabled = false;
             return;
         }
 
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
-
-        Respawn();
     }
 
-    void Update()
-    {
-        if (!IsOwner || finished) return;
-
-        ReadMovement();
-        ReadMouse();
-
-        if (Mouse.current.leftButton.wasPressedThisFrame)
-            jumpQueued = true;
-    }
-
-    void FixedUpdate()
-    {
-        if (!IsOwner || finished) return;
-
-        grounded = Physics.CheckSphere(
-            groundCheck.position,
-            groundRadius,
-            groundLayer
-        );
-
-        Vector3 velocity = rb.linearVelocity;
-
-        // ---- horisontaalinen liike ----
-        Vector3 inputDir = transform.right * moveInput.x + transform.forward * moveInput.y;
-        velocity.x = inputDir.x * moveSpeed;
-        velocity.z = inputDir.z * moveSpeed;
-
-        // ---- HYPPY ----
-        if (jumpQueued && grounded)
-        {
-            velocity.y = jumpForce;
-        }
-
-        // ---- nopeutettu lasku ----
-        if (velocity.y < 0f)
-        {
-            velocity.y += Physics.gravity.y * fallMultiplier * Time.fixedDeltaTime;
-        }
-
-        // ---- PLATFORMIN VELOCITY (TÄRINÄ POIS) ----
-        if (grounded && platformRb != null)
-        {
-            velocity += platformRb.linearVelocity;
-        }
-
-        rb.linearVelocity = velocity;
-        jumpQueued = false;
-
-        rb.MoveRotation(Quaternion.Euler(0f, yaw, 0f));
-    }
-
-    // ---------- COLLISIONS ----------
-    void OnCollisionStay(Collision col)
+    private void Update()
     {
         if (!IsOwner) return;
+        if (GameManager.Instance != null && !GameManager.Instance.IsPlaying) return;
 
-        if (col.collider.CompareTag("Platform"))
+        Look();
+        Move();
+    }
+
+    private void Move()
+    {
+        Vector3 gcPos = groundCheck ? groundCheck.position : (transform.position + Vector3.down * 0.9f);
+        bool grounded = Physics.CheckSphere(gcPos, groundRadius, groundLayer, QueryTriggerInteraction.Ignore);
+
+        ApplyPlatformDelta(gcPos, grounded);
+
+        if (grounded && yVelocity < 0f)
+            yVelocity = groundSnap;
+
+        bool jumpPressed =
+            (Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame) ||
+            (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame);
+
+        if (grounded && jumpPressed)
+            yVelocity = jumpForce;
+
+        yVelocity += gravity * Time.deltaTime;
+
+        float x = 0f;
+        float z = 0f;
+
+        if (Keyboard.current != null)
         {
-            platformRb = col.rigidbody;
+            if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) x -= 1f;
+            if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) x += 1f;
+            if (Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed) z += 1f;
+            if (Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed) z -= 1f;
+        }
+
+        Vector3 move = (transform.right * x + transform.forward * z);
+        if (move.sqrMagnitude > 1f) move.Normalize();
+
+        Vector3 velocity = move * moveSpeed;
+        velocity.y = yVelocity;
+
+        controller.Move(velocity * Time.deltaTime);
+        transform.rotation = Quaternion.Euler(0f, yaw, 0f);
+    }
+
+    private void ApplyPlatformDelta(Vector3 groundCheckPos, bool grounded)
+    {
+        if (!grounded)
+        {
+            groundPlatform = null;
+            return;
+        }
+
+        // Ray alas -> mikä collider on jalkojen alla
+        if (Physics.Raycast(groundCheckPos + Vector3.up * 0.2f, Vector3.down, out RaycastHit hit, 1.2f, groundLayer, QueryTriggerInteraction.Ignore))
+        {
+            Transform newPlatform = hit.collider.transform;
+
+            if (groundPlatform != newPlatform)
+            {
+                groundPlatform = newPlatform;
+                lastPlatformPos = groundPlatform.position;
+                return;
+            }
+
+            // Platform liikkui -> siirrä pelaajaa sama delta
+            Vector3 delta = groundPlatform.position - lastPlatformPos;
+            if (delta.sqrMagnitude > 0f)
+                controller.Move(delta);
+
+            lastPlatformPos = groundPlatform.position;
         }
     }
 
-    void OnCollisionExit(Collision col)
+    private void Look()
     {
-        if (col.collider.CompareTag("Platform"))
-        {
-            platformRb = null;
-        }
-    }
+        if (Mouse.current == null) return;
 
-    // ---------- INPUT ----------
-    void ReadMovement()
-    {
-        float x = 0, y = 0;
-
-        if (Keyboard.current.leftArrowKey.isPressed)  x -= 1;
-        if (Keyboard.current.rightArrowKey.isPressed) x += 1;
-        if (Keyboard.current.upArrowKey.isPressed)    y += 1;
-        if (Keyboard.current.downArrowKey.isPressed)  y -= 1;
-
-        moveInput = new Vector2(x, y);
-    }
-
-    void ReadMouse()
-    {
-        Vector2 d = Mouse.current.delta.ReadValue();
-        yaw += d.x * mouseSensitivity;
-        pitch -= d.y * mouseSensitivity;
+        Vector2 delta = Mouse.current.delta.ReadValue();
+        yaw += delta.x * mouseSensitivity;
+        pitch -= delta.y * mouseSensitivity;
         pitch = Mathf.Clamp(pitch, -85f, 85f);
 
-        cameraPivot.localRotation = Quaternion.Euler(pitch, 0, 0);
+        if (cameraPivot)
+            cameraPivot.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 
-    // ---------- TRIGGERS ----------
-    void OnTriggerEnter(Collider other)
+    // ===== Server-authoritative respawn (käytetään vain jos joku kutsuu) =====
+    public void ServerRespawn()
     {
-        if (!IsOwner) return;
+        if (!IsServer) return;
 
-        if (other.CompareTag("Goal"))
-        {
-            finished = true;
-            rb.linearVelocity = Vector3.zero;
-            rb.isKinematic = true;
-            GameManager.Instance?.Finish();
-        }
+        if (spawnT == null) spawnT = GameObject.FindGameObjectWithTag("Spawn")?.transform;
+        spawnPos = spawnT ? spawnT.position : spawnPos;
 
-        if (other.CompareTag("Pit"))
-        {
-            Respawn();
-        }
+        yVelocity = 0f;
+
+        if (TryGetComponent<NetworkTransform>(out var nt))
+            nt.Teleport(spawnPos, transform.rotation, transform.localScale);
+        else
+            transform.position = spawnPos;
+
+        RespawnOwnerRpc(spawnPos);
     }
 
-    void Respawn()
+    [Rpc(SendTo.Owner)]
+    private void RespawnOwnerRpc(Vector3 pos)
     {
-        finished = false;
-        rb.isKinematic = false;
+        yVelocity = 0f;
 
-        Vector3 pos = spawnPoint ? spawnPoint.position : Vector3.up * 5f;
-        rb.linearVelocity = Vector3.zero;
-        rb.position = pos;
-
-        jumpQueued = false;
-        platformRb = null;
+        controller.enabled = false;
+        transform.position = pos;
+        controller.enabled = true;
     }
-
-    public void ForceRespawn() => Respawn();
 }

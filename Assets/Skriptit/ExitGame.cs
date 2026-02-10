@@ -1,12 +1,12 @@
 // ExitGame.cs
-using UnityEngine;
 using Unity.Netcode;
+using UnityEngine;
 
 public class ExitGame : MonoBehaviour
 {
-    public void QuitGame()
+    public void QuitApplication()
     {
-        if (NetworkManager.Singleton != null)
+        if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             NetworkManager.Singleton.Shutdown();
 
         Application.Quit();
